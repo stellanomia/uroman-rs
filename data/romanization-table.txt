@@ -1636,6 +1636,7 @@
 ::s ༄ ::t ""  ::comment Tibetan head mark
 ::s ༄༅ ::t ""  ::comment Tibetan head mark
 ::s ༆ ::t ""  ::comment Tibetan head mark
+
 # Myanmar/Burmese
 ::s ၊ ::t ,
 ::s ။ ::t .
@@ -2205,3 +2206,6 @@ Khmer
 ::preserve ::from U+1FA00 ::to U+1FA6F ::comment Chess Symbols
 ::preserve ::from U+1FB00 ::to U+1FBCF ::comment Symbols for Legacy Computing
 ::preserve ::from U+1FA70 ::to U+1FAFF ::comment Symbols and Pictographs Extended-A
+
+# uroman-rs
+::s འི ::t i ::use-only-for-whole-word ::comment Direct rule to prevent incorrect preservation of initial 'a-chung.

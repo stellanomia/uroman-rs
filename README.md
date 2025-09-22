@@ -114,7 +114,9 @@ Performance was measured against the original Python implementation using [`hype
 
 ## Bug Fixes
 
-`uroman-rs` aims to be not only a faithful reimplementation but also a more robust one. It handles several edge cases that can cause the original `uroman.py` script to crash.
+`uroman-rs` aims to be not only a faithful reimplementation but also a more robust and accurate one. It handles several edge cases that can cause the original `uroman.py` script to crash or produce incorrect output.
+
+### Crash Prevention on Incomplete Patterns
 
 For example, the original script panics on inputs with incomplete fractional patterns like `"百分之"` ("percent of..."). This occurs because the script expects a subsequent number but does not safely handle cases where one is not found, leading to a `NoneType` attribute error. This issue has been reported to the original author (see [isi-nlp/uroman#16](https://github.com/isi-nlp/uroman/issues/16)).
 
@@ -122,10 +124,6 @@ For example, the original script panics on inputs with incomplete fractional pat
 $ uv run uroman.py "百分之多少"
 Traceback (most recent call last):
   ...
-  File ".../uroman.py", line 1100, in romanize_string_core
-    lat.add_numbers(self, **args)
-  File ".../uroman.py", line 2112, in add_numbers
-    if right_edge.value is None:
 AttributeError: 'NoneType' object has no attribute 'value'
 ```
 
@@ -133,11 +131,52 @@ In contrast, `uroman-rs` handles this input safely and provides a reasonable fal
 
 ```sh
 $ cargo run -r -- "百分之多少"
-  Running `target/release/uroman-rs '百分之多少'`
 baifenzhiduoshao
 ```
 
-This ensures higher stability when processing large and diverse text corpora where such edge cases may appear.
+### Correct Romanization of Tibetan Letter '-A' (U+0F60)
+
+In addition to improving stability, `uroman-rs` also corrects certain romanization errors found in the original implementation. A notable example is the handling of the Tibetan letter `འ` (U+0F60, TIBETAN LETTER -A).
+
+The original script incorrectly romanizes this character, which represents the vowel `a` with a preceding glottal stop `[ʔ]`, by omitting the vowel sound entirely.
+
+```sh
+# Original uroman.py output omits the 'a' sound
+$ uv run uroman/uroman/uroman.py "འ"
+'
+```
+
+`uroman-rs` provides the linguistically correct romanization, faithfully representing both the glottal stop (as an apostrophe) and the vowel sound. This ensures a higher quality and more accurate transliteration for Tibetan script.
+
+```sh
+# uroman-rs provides the correct output
+$ uroman-rs "འ"
+'a
+```
+
+### More Precise Romanization by Distinguishing Tibetan Consonants
+
+`uroman-rs` provides a more precise romanization for certain Tibetan characters compared to the original script. The `uroman.py` implementation fails to distinguish between the glottal stop consonant `འ` ('a-chung) and the vowel carrier `ཨ` ('a-chen) when followed by the vowel `ེ` (`e`).
+
+The original script produces the same output for both `འེ` and `ཨེ`.
+
+```sh
+# Original uroman.py output is identical for both characters
+$ uv run uroman.py "ཨེ"
+e
+$ uv run uroman.py "འེ"
+e
+```
+
+In contrast, `uroman-rs` correctly preserves the leading glottal stop of `འ`, maintaining the distinction between the two characters as intended by the script.
+
+```sh
+# uroman-rs distinguishes the two characters
+$ uroman-rs "ཨེ"
+e
+$ uroman-rs "འེ"
+'e
+```
 
 ## License
 

@@ -108,6 +108,23 @@ fn test_chinese_fractions_and_percentages() {
 }
 
 #[test]
+fn test_tibetan_edge_cases() {
+    let uroman = Uroman::new();
+
+    assert_romanizes_to_str(&uroman, "བཟང", None, "bzang");
+    assert_romanizes_to_str(&uroman, "འ", None, "'a");
+    assert_romanizes_to_str(&uroman, "ཉིན", None, "nyin");
+    assert_romanizes_to_str(&uroman, "འདིའི་", None, "'di'i·");
+    assert_romanizes_to_str(&uroman, "འདིའི་", None, "'di'i·");
+    assert_romanizes_to_str(&uroman, "འི", None, "i");
+    assert_romanizes_to_str(&uroman, "འཁྲིད", None, "'khrid");
+    assert_romanizes_to_str(&uroman, "ངའི་ཕའི་དཔེ་དེབ།", None, "nga'i·pha'i·dpe·deb,");
+    assert_romanizes_to_str(&uroman, "བསྒྲུབས", None, "bsgrubs");
+    assert_romanizes_to_str(&uroman, "ཨ་མདོ", None, "a·mdo");
+    assert_romanizes_to_str(&uroman, "འེ", None, "'e");
+}
+
+#[test]
 fn test_robustness_and_complex_fallbacks() {
     let uroman = Uroman::new();
 

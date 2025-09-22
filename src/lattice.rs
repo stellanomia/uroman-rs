@@ -773,10 +773,10 @@ impl<'a> Lattice<'a> {
                     .unwrap_or("?".to_string());
                 self.props.insert(("edge-vowel".to_string(), i), None);
 
-                if self.char_is_vowel_sign(c) || ROM_VOWEL_END_RE.is_match(&rom) {
+                if self.char_is_vowel_sign(c) {
                     vowel_pos = Some(i);
                     self.props.insert(("edge-vowel".to_string(), i), Some(true));
-                    if roms.last().is_some_and(|r| r == "'") {
+                    if roms.len() == 1 && roms[0] == "'" {
                         self.props
                             .insert(("edge-delete".to_string(), i - 1), Some(true));
                     }
