@@ -13,21 +13,17 @@ use crate::utils::slot_value_in_double_colon_del_list;
 static KAYAH_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"kayah\s+(\S+)\s*$").unwrap());
 static MENDE_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"m\d+\s+(\S+)\s*$").unwrap());
 static SPACE_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\S\s+\S").unwrap());
-static HANGUL_LEADS: LazyLock<Vec<&'static str>> = LazyLock::new(|| {
-    "g gg n d dd r m b bb s ss - j jj c k t p h"
-        .split_whitespace()
-        .collect()
-});
-static HANGUL_VOWELS: LazyLock<Vec<&'static str>> = LazyLock::new(|| {
-    "a ae ya yae eo e yeo ye o wa wai oe yo u weo we wi yu eu yi i"
-        .split_whitespace()
-        .collect()
-});
-static HANGUL_TAILS: LazyLock<Vec<&'static str>> = LazyLock::new(|| {
-    "- g gg gs n nj nh d l lg lm lb ls lt lp lh m b bs s ss ng j c k t p h"
-        .split_whitespace()
-        .collect()
-});
+static HANGUL_LEADS: &[&str] = &[
+    "g", "gg", "n", "d", "dd", "r", "m", "b", "bb", "s", "ss", "-", "j", "jj", "c", "k", "t", "p", "h"
+];
+static HANGUL_VOWELS: &[&str] = &[
+    "a", "ae", "ya", "yae", "eo", "e", "yeo", "ye", "o", "wa", "wai", "oe", "yo", "u", "weo",
+    "we", "wi", "yu", "eu", "yi", "i"
+];
+static HANGUL_TAILS: &[&str] = &[
+    "-", "g", "gg", "gs", "n", "nj", "nh", "d", "l", "lg", "lm", "lb", "ls", "lt", "lp",
+    "lh", "m", "b", "bs", "s", "ss", "ng", "j", "c", "k", "t", "p", "h"
+];
 
 /// Represents a value that can be an integer, float, or string.
 #[derive(Debug, Clone)]
@@ -82,7 +78,7 @@ pub(crate) struct UromanInner {
 impl UromanInner {
     pub(crate) fn new() -> Self {
         let mut uroman = Self {
-            rom_rules: IndexMap::with_capacity(42979),
+            rom_rules: IndexMap::with_capacity(42980),
             scripts: HashMap::with_capacity(179),
             dict_bool: HashMap::with_capacity(44366),
             dict_str: HashMap::with_capacity(122770),

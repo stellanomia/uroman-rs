@@ -20,7 +20,7 @@ In the same spirit of fidelity, this project respects the licensing of the origi
 
 ## Features
 
-*   **Performance**: Achieves approximately **22x the speed** of the standard Python version, making it ideal for large-scale data processing. (See [Benchmark](#benchmark))
+*   **Performance**: Achieves approximately **27x the speed** of the standard Python version, making it ideal for large-scale data processing. (See [Benchmark](#benchmark))
 *   **Robustness**: Fixes several edge-case bugs present in the original implementation, ensuring safer processing of diverse inputs. (See [Bug Fixes](#bug-fixes))
 *   **Self-Contained**: A pure Rust implementation with no dependency on external runtimes. It compiles to a single, portable binary.
 *   **High Fidelity**: Faithfully reproduces the behavior of the original `uroman` and passes its test suite.
@@ -109,8 +109,8 @@ Performance was measured against the original Python implementation using [`hype
 
 | Implementation                | Mean Time (± σ)       | Relative Performance |
 |-------------------------------|-----------------------|----------------------|
-| **`uroman-rs` (This project)**| **99.3 ms ± 3.6 ms**  | **~22.0x faster**     |
-| `uroman.py` (via `uv run`)    | 2180 ms ± 26 ms       | Baseline             |
+| **`uroman-rs` (This project)**| **82.9 ms ± 2.4 ms**  | **~27.7x faster**     |
+| `uroman.py` (via `uv run`)    | 2295 ms ± 20 ms       | Baseline             |
 
 ## Bug Fixes
 
@@ -142,7 +142,7 @@ The original script incorrectly romanizes this character, which represents the v
 
 ```sh
 # Original uroman.py output omits the 'a' sound
-$ uv run uroman/uroman/uroman.py "འ"
+$ uv run uroman.py "འ"
 '
 ```
 

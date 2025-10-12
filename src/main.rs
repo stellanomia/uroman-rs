@@ -79,6 +79,10 @@ struct Cli {
     #[arg(short = 'd', long, action = clap::ArgAction::SetTrue)]
     decode_unicode: bool,
 
+    /// Enable parallel file processing.
+    #[arg(short = 'p', long = "use-parallel", action = clap::ArgAction::SetTrue)]
+    use_parallel: bool,
+
     /// Run and display a few samples.
     #[arg(long, action = clap::ArgAction::SetTrue)]
     sample: bool,
@@ -166,15 +170,27 @@ fn process_direct_input(
 fn process_stream(uroman: &Uroman, cli: &Cli, writer: &mut dyn Write) -> Result<(), UromanError> {
     let reader = get_reader(&cli.input_filename)?;
 
-    uroman.romanize_file(
-        reader,
-        writer,
-        cli.lcode.as_deref(),
-        cli.rom_format.into(),
-        cli.max_lines,
-        cli.decode_unicode,
-        cli.silent,
-    )?;
+    if cli.use_parallel {
+        uroman.romanize_file_parallel(
+            reader,
+            writer,
+            cli.lcode.as_deref(),
+            cli.rom_format.into(),
+            cli.max_lines,
+            cli.decode_unicode,
+            cli.silent,
+        )?;
+    } else {
+        uroman.romanize_file(
+            reader,
+            writer,
+            cli.lcode.as_deref(),
+            cli.rom_format.into(),
+            cli.max_lines,
+            cli.decode_unicode,
+            cli.silent,
+        )?;
+    }
     Ok(())
 }
 

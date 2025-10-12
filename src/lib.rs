@@ -6,6 +6,7 @@
 
 #![allow(clippy::too_many_arguments)]
 
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 use serde::Serialize;
 use std::any::TypeId;
 use std::fmt;
@@ -517,6 +518,102 @@ impl Uroman {
             eprintln!(
                 "Total number of lines with non-UTF-8 characters: {non_utf8_chars_total}"
             );
+        }
+
+        writer.flush()?;
+        Ok(())
+    }
+
+    /// Romanizes a stream of text line by line in parallel for maximum performance.
+    ///
+    /// This version reads the entire input into memory to process lines concurrently using
+    /// multiple CPU cores. It is significantly faster than `romanize_file` but requires
+    /// more memory. For very large files, consider using the sequential `romanize_file`.
+    ///
+    /// The output order is preserved.
+    ///
+    /// # Differences from `romanize_file`
+    ///
+    /// * Memory Usage: Loads the entire file into memory. May fail on files larger than RAM.
+    /// * Error Reporting: Does not warn about invalid UTF-8 characters.
+    ///
+    /// # Arguments
+    ///
+    /// lcode: [ISO 639-3 language code](https://www.loc.gov/standards/iso-639-2/php/code_list.php)
+    /// (e.g., eng, jpn, hin, ara, zho)
+    ///
+    /// # Errors
+    ///
+    /// This function will return an `io::Error` if any I/O operation fails during
+    /// reading from the `reader` or writing to the `writer`.
+    pub fn romanize_file_parallel<R: BufRead, W: Write>(
+        &self,
+        reader: R,
+        mut writer: W,
+        lcode: Option<&str>,
+        rom_format: RomFormat,
+        max_lines: Option<usize>,
+        decode_unicode: bool,
+        silent: bool,
+    ) -> Result<(), RomanizationError> {
+        let mut lines: Vec<String> = reader.lines().collect::<Result<_, _>>()?;
+
+        if let Some(max) = max_lines {
+            lines.truncate(max);
+        }
+
+        let line_count = lines.len();
+        let default_lcode = lcode;
+        let lcode_directive = "::lcode ";
+        // UTF-8 error handling is simplified as `lines()` replaces invalid sequences.
+        // The original byte-level diff check is not replicated here.
+
+        let results: Vec<String> = lines
+            .par_iter()
+            .map(|line| {
+                if let Some(rest_of_line) = line.strip_prefix(lcode_directive) {
+                    let parts: Vec<&str> = rest_of_line.splitn(2, char::is_whitespace).collect();
+                    let (lcode, text_to_romanize) =
+                        (parts.first().cloned(), parts.get(1).cloned().unwrap_or(""));
+
+                    let result = if decode_unicode {
+                        self.romanize_escaped_with_format(text_to_romanize, lcode, Some(rom_format))
+                    } else {
+                        self.romanize_with_format(text_to_romanize, lcode, Some(rom_format))
+                    };
+
+                    let output = result.to_string().unwrap_or_default();
+
+                    match rom_format {
+                        RomFormat::Str => {
+                            format!("{}{}{} {}", lcode_directive, lcode.unwrap_or(""), "", output)
+                        }
+                        _ => {
+                            let meta_edge = format!(r#"[0,0,"","lcode: {}"]"#, lcode.unwrap_or(""));
+                            if let Some(stripped) = output.strip_prefix('[') {
+                                format!("[{meta_edge},{stripped}")
+                            } else {
+                                output
+                            }
+                        }
+                    }
+                } else {
+                    let result = if decode_unicode {
+                        self.romanize_escaped_with_format(line, default_lcode, Some(rom_format))
+                    } else {
+                        self.romanize_with_format(line, default_lcode, Some(rom_format))
+                    };
+                    result.to_string().unwrap_or_default()
+                }
+            })
+            .collect();
+
+        for output in results {
+            writeln!(writer, "{}", output)?;
+        }
+
+        if !silent && line_count > 0 {
+            eprintln!();
         }
 
         writer.flush()?;
