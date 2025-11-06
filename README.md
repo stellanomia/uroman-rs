@@ -1,11 +1,11 @@
 <div align="center">
   <h1>uroman-rs</h1>
   <p>
-    A blazingly fast, self-contained Rust reimplementation of the <code>uroman</code> universal romanizer.
+    A self-contained Rust reimplementation of the <code>uroman</code> universal romanizer.
   </p>
   <p>
     <a href="https://crates.io/crates/uroman"><img src="https://img.shields.io/crates/v/uroman.svg" alt="Crates.io"></a>
-    <a href="https://github.com/fulm-o/uroman-rs/actions/workflows/rust.yml"><img src="https://github.com/fulm-o/uroman-rs/actions/workflows/rust.yml/badge.svg" alt="CI"></a>
+    <a href="https://github.com/stellanomia/uroman-rs/actions/workflows/rust.yml"><img src="https://github.com/stellanomia/uroman-rs/actions/workflows/rust.yml/badge.svg" alt="CI"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache--2.0-blue.svg" alt="License: Apache-2.0"></a>
   </p>
 </div>
@@ -130,7 +130,7 @@ AttributeError: 'NoneType' object has no attribute 'value'
 In contrast, `uroman-rs` handles this input safely and provides a reasonable fallback romanization, demonstrating its enhanced reliability:
 
 ```sh
-$ cargo run -r -- "百分之多少"
+$ uroman-rs "百分之多少"
 baifenzhiduoshao
 ```
 

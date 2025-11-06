@@ -1,6 +1,6 @@
 //! Defines the `RomRule` struct and related parsing logic.
 
-use indexmap::IndexMap;
+use std::collections::HashMap;
 
 use crate::{
     core::UromanInner, utils::{
@@ -176,4 +176,4 @@ impl RomRule {
 }
 
 /// A collection of romanization rules, typically grouped by the source string `s`.
-pub type RomRules = IndexMap<String, Vec<RomRule>>;
+pub type RomRules = HashMap<String, Vec<RomRule>>;

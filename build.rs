@@ -1,8 +1,14 @@
+use std::env;
 use std::fs::File;
 use std::io::{BufRead, BufReader, BufWriter, Write};
 use std::path::Path;
 
 fn main() {
+    if env::var("CARGO_CFG_DOC").is_ok() {
+        println!("cargo:warning=Skipping decomposition map generation during rustdoc build.");
+        return;
+    }
+
     let path = Path::new("src/decompositions.rs");
     let mut file = BufWriter::new(File::create(path).unwrap());
 

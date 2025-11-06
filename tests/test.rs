@@ -8,10 +8,9 @@ fn assert_uroman_output(input_path: &str, expected_output_path: &str) {
 
     let expected_output_normalized = expected_output.replace("\r\n", "\n");
 
-    let mut cmd = Command::cargo_bin("uroman-rs").unwrap();
     let input = File::open(input_path).unwrap();
+    let cmd = Command::new("uroman-rs").stdin(input).unwrap();
     let output = cmd
-        .stdin(input)
         .assert()
         .success()
         .get_output()

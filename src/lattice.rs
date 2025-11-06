@@ -2,7 +2,7 @@ use crate::decompositions::DECOMPOSITIONS;
 use crate::edge::{Edge, EdgeData, NumData, NumDataUpdates};
 use crate::rom_rule::RomRule;
 use crate::{Uroman, rom_format};
-use crate::core::{AbugidaCacheEntry, UromanInner};
+use crate::core::{AbugidaRuleType, UromanInner};
 use num_rational::Ratio;
 use regex::Regex;
 use std::collections::{HashMap, HashSet};
@@ -52,6 +52,20 @@ static THAI_CONSONANT_XZ_END_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"[bcdfghjklmnpqrstvwxz]+$").unwrap());
 static THAI_CONSONANT_XZ_ONLY_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[bcdfghjklmnpqrstvwxz]+$").unwrap());
+
+static RE_AO: LazyLock<(Regex, Regex)> = LazyLock::new(|| {
+    (
+        Regex::new(r"([cfghkmnqrstxy]?y)(a+|o+)-?$").unwrap(),
+        Regex::new(r"([bcdfghjklmnpqrstvwxyz]+)(a|o)-?$").unwrap(),
+    )
+});
+static RE_A: LazyLock<(Regex, Regex)> = LazyLock::new(|| {
+    (
+        Regex::new(r"([cfghkmnqrstxy]?y)(a+)-?$").unwrap(),
+        Regex::new(r"([bcdfghjklmnpqrstvwxyz]+)(a)-?$").unwrap(),
+    )
+});
+
 
 pub(super) struct Lattice<'a> {
     pub s: String,
@@ -1693,31 +1707,23 @@ impl<'a> Lattice<'a> {
         let Some(script) = self.uroman.scripts.get(&script_name.to_lowercase()) else {
             return rom;
         };
-        let Some((re1, re2)) = &script.abugida_regexes else {
+        let Some(abugida_rule_type) = &script.abugida_rule_type else {
             return rom;
         };
 
-        let cache_key = (script_name.clone(), rom.clone());
-        let cache_entry = {
-            let reader = self.uroman.abugida_cache.read().unwrap();
-            if let Some(entry) = reader.get(&cache_key) {
-                entry.clone()
-            } else {
-                drop(reader);
+        let abugida_regexes = match abugida_rule_type {
+            AbugidaRuleType::A => &RE_A,
+            AbugidaRuleType::AO => &RE_AO,
+        };
 
-                let mut writer = self.uroman.abugida_cache.write().unwrap();
-
-                if let Some(entry) = writer.get(&cache_key) {
-                    entry.clone()
-                } else {
                     let mut base_rom: Option<String>;
                     let mut base_rom_plus_vowel: Option<String>;
                     let mut modified_rom = rom.clone();
 
-                    if let Some(caps) = re1.captures(&rom) {
+        if let Some(caps) = abugida_regexes.0.captures(&rom) {
                         base_rom = Some(caps[1].to_string());
                         base_rom_plus_vowel = Some(format!("{}{}", &caps[1], &caps[2]));
-                    } else if let Some(caps) = re2.captures(&rom) {
+        } else if let Some(caps) = abugida_regexes.1.captures(&rom) {
                         base_rom = Some(caps[1].to_string());
                         base_rom_plus_vowel = Some(format!("{}{}", &caps[1], &caps[2]));
                         if rom.ends_with('-')
@@ -1740,24 +1746,11 @@ impl<'a> Lattice<'a> {
                             base_rom_plus_vowel = None;
                         }
 
-                    let new_entry = AbugidaCacheEntry {
-                        base_rom,
-                        base_rom_plus_vowel,
-                        modified_rom,
-                    };
-
-                    writer.insert(cache_key, new_entry.clone());
-
-                    new_entry
-                }
-            }
-        };
-
-        rom = cache_entry.modified_rom;
-        let Some(base_rom) = cache_entry.base_rom else {
+        rom = modified_rom;
+        let Some(base_rom) = base_rom else {
             return rom;
         };
-        let Some(base_rom_plus_vowel) = cache_entry.base_rom_plus_vowel else {
+        let Some(base_rom_plus_vowel) = base_rom_plus_vowel else {
             return rom;
         };
 

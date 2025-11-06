@@ -1,9 +1,8 @@
-use indexmap::IndexMap;
 use regex::Regex;
 use unicode_normalization::UnicodeNormalization;
 use unicode_properties::UnicodeGeneralCategory;
 use std::collections::{HashMap, HashSet};
-use std::sync::{LazyLock, RwLock};
+use std::sync::LazyLock;
 use serde_json::Value as JsonValue;
 
 use crate::{RomRule, utils};
@@ -43,7 +42,7 @@ pub(crate) struct Script {
     pub abugida_default_vowels: Vec<String>,
     pub alt_script_names: Vec<String>,
     pub languages: Vec<String>,
-    pub abugida_regexes: Option<(Regex, Regex)>,
+    pub abugida_rule_type: Option<AbugidaRuleType>,
 }
 
 // #[derive(Default, Debug)]
@@ -53,11 +52,10 @@ pub(crate) struct Script {
 //     pub is_large_power: Option<bool>,
 // }
 
-#[derive(Debug, Clone)]
-pub(crate) struct AbugidaCacheEntry {
-    pub base_rom: Option<String>,
-    pub base_rom_plus_vowel: Option<String>,
-    pub modified_rom: String,
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+pub(crate) enum AbugidaRuleType {
+    A,
+    AO,
 }
 
 #[derive(Debug, Default)]
@@ -71,14 +69,12 @@ pub(crate) struct UromanInner {
     pub(crate) fraction_connectors: HashSet<String>,
     pub(crate) plus_signs: HashSet<String>,
     pub(crate) minus_signs: HashSet<String>,
-    pub(crate) hangul_rom: RwLock<HashMap<char, String>>,
-    pub(crate) abugida_cache: RwLock<HashMap<(String, String), AbugidaCacheEntry>>,
 }
 
 impl UromanInner {
     pub(crate) fn new() -> Self {
         let mut uroman = Self {
-            rom_rules: IndexMap::with_capacity(42980),
+            rom_rules: HashMap::with_capacity(42980),
             scripts: HashMap::with_capacity(179),
             dict_bool: HashMap::with_capacity(44366),
             dict_str: HashMap::with_capacity(122770),
@@ -87,8 +83,6 @@ impl UromanInner {
             fraction_connectors: HashSet::with_capacity(1),
             minus_signs: HashSet::with_capacity(2),
             plus_signs: HashSet::new(),
-            hangul_rom: HashMap::new().into(),
-            abugida_cache: HashMap::new().into(),
         };
         uroman.load_resource_files();
         uroman
@@ -281,7 +275,7 @@ impl UromanInner {
                         .collect()
                 };
 
-                let abugida_regexes = if !abugida_default_vowels.is_empty() {
+                let abugida_rule_type = if !abugida_default_vowels.is_empty() {
                     let vowels_regex1 = abugida_default_vowels.join("|");
                     let vowels_regex2 = abugida_default_vowels
                         .iter()
@@ -289,13 +283,13 @@ impl UromanInner {
                         .collect::<Vec<_>>()
                         .join("|");
 
-                    let re1 =
-                        Regex::new(&format!(r"([cfghkmnqrstxy]?y)({vowels_regex2})-?$")).unwrap();
-                    let re2 =
-                        Regex::new(&format!(r"([bcdfghjklmnpqrstvwxyz]+)({vowels_regex1})-?$"))
-                            .unwrap();
+                    let abugida_rule_type = match (vowels_regex1.as_str(), vowels_regex2.as_str()) {
+                        ("a|o", "a+|o+") => AbugidaRuleType::AO,
+                        ("a", "a+") => AbugidaRuleType::A,
+                        _ => unreachable!()
+                    };
 
-                    Some((re1, re2))
+                    Some(abugida_rule_type)
                 } else {
                     None
                 };
@@ -306,7 +300,7 @@ impl UromanInner {
                     abugida_default_vowels,
                     alt_script_names: alt_script_names.clone(),
                     languages: languages.clone(),
-                    abugida_regexes,
+                    abugida_rule_type,
                 };
 
                 self.scripts.insert(lc_script_name, new_script.clone());
@@ -576,40 +570,26 @@ impl UromanInner {
     /// into its constituent Jamo (lead, vowel, tail) and maps them to roman characters.
     /// The results are cached for performance.
     pub(crate) fn unicode_hangul_romanization(&self, c: char) -> Option<String> {
-        {
-            let hangul_rom_reader = self.hangul_rom.read().unwrap();
-            if let Some(cached_rom) = hangul_rom_reader.get(&c) {
-                return Some(cached_rom.clone());
-            }
-        }
-
-        let mut hangul_rom_writer = self.hangul_rom.write().unwrap();
-        if let Some(cached_rom) = hangul_rom_writer.get(&c) {
-            return Some(cached_rom.clone());
-        }
-
         let cp = c as u32;
 
-        if (0xAC00..=0xD7A3).contains(&cp) {
-            let code = cp - 0xAC00;
-
-            let lead_index = (code / (28 * 21)) as usize;
-            let vowel_index = ((code / 28) % 21) as usize;
-            let tail_index = (code % 28) as usize;
-
-            let rom = format!(
-                "{}{}{}",
-                HANGUL_LEADS[lead_index], HANGUL_VOWELS[vowel_index], HANGUL_TAILS[tail_index]
-            );
-
-            let rom = rom.replace('-', "");
-
-            hangul_rom_writer.insert(c, rom.clone());
-
-            Some(rom)
-        } else {
-            None
+        if !(0xAC00..=0xD7A3).contains(&cp) {
+            return None;
         }
+
+        let code = cp - 0xAC00;
+
+        let lead_index = (code / (28 * 21)) as usize;
+        let vowel_index = ((code / 28) % 21) as usize;
+        let tail_index = (code % 28) as usize;
+
+        let rom = format!(
+            "{}{}{}",
+            HANGUL_LEADS[lead_index], HANGUL_VOWELS[vowel_index], HANGUL_TAILS[tail_index]
+        );
+
+        let rom = rom.replace('-', "");
+
+        Some(rom)
     }
 
     // fn unicode_hangul_romanization_str(&mut self, s: &str, pass_through_p: bool) -> String {
