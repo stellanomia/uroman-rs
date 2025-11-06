@@ -23,7 +23,7 @@ fn assert_uroman_output(input_path: &str, expected_output: &str) {
 #[test]
 fn test_multi_script_romanization() {
     assert_uroman_output(
-        "tests/test/multi-script.txt",
+        concat!(env!("CARGO_MANIFEST_DIR"), "/tests/test/multi-script.txt"),
         include_str!("test/multi-script.uroman-ref.txt"),
     );
 }
